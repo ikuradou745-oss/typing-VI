@@ -1,1 +1,824 @@
-<!-- このスクリプトには主な構造を書こう（このコメントは消さないでね） -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>バトルスライム</title>
+    <!-- このスクリプトには主な構造を書こう（このコメントは消さないでね） -->
+    <style>
+        /* === 全体スタイル === */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        #app {
+            width: 100%;
+            max-width: 900px;
+            height: 650px;
+            background: rgba(30, 41, 59, 0.85);
+            border: 3px solid #3b82f6;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .screen {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: absolute;
+            top: 0;
+            left: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* === 初回名前入力画面 === */
+        #name-input-screen {
+            background: #1e293b;
+            z-index: 50;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .welcome-title {
+            font-size: 2rem;
+            margin-bottom: 20px;
+            color: #60a5fa;
+            text-shadow: 0 0 10px rgba(96, 165, 250, 0.5);
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
+            max-width: 360px;
+        }
+
+        .input-label {
+            font-size: 1.1rem;
+            color: #cbd5e1;
+        }
+
+        .text-input {
+            padding: 12px 16px;
+            font-size: 1.1rem;
+            border: 2px solid #475569;
+            border-radius: 8px;
+            background-color: #0f172a;
+            color: #ffffff;
+            outline: none;
+            transition: border-color 0.2s;
+            text-align: center;
+        }
+
+        .text-input:focus {
+            border-color: #3b82f6;
+        }
+
+        .error-message {
+            color: #ef4444;
+            font-size: 0.9rem;
+            min-height: 1.2em;
+        }
+
+        .primary-btn {
+            padding: 12px 24px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #ffffff;
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+            transition: transform 0.1s, background 0.2s;
+        }
+
+        .primary-btn:hover {
+            transform: translateY(-2px);
+            background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+        }
+
+        .primary-btn:active {
+            transform: translateY(0);
+        }
+
+        /* === ホーム画面 === */
+        #home-screen {
+            justify-content: space-between;
+            padding: 25px 35px;
+        }
+
+        .home-header {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #334155;
+            padding-bottom: 15px;
+        }
+
+        .game-title {
+            font-size: 1.8rem;
+            color: #38bdf8;
+            letter-spacing: 2px;
+        }
+
+        .header-user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: #0f172a;
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: 1px solid #334155;
+        }
+
+        .player-name-text {
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: #f1f5f9;
+        }
+
+        .icon-btn {
+            background: transparent;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .icon-btn:hover {
+            transform: rotate(45deg) scale(1.1);
+        }
+
+        .home-main-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 280px;
+            margin: auto;
+        }
+
+        .menu-btn {
+            padding: 16px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            color: white;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s, filter 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .menu-btn:hover {
+            transform: scale(1.05);
+            filter: brightness(1.1);
+        }
+
+        .play-btn { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+        .shop-btn { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+        .equip-btn { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); }
+
+        /* === モーダル共通共通 === */
+        .modal-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(4px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .modal-content {
+            background: #1e293b;
+            border: 2px solid #475569;
+            border-radius: 16px;
+            padding: 25px;
+            width: 90%;
+            max-width: 750px;
+            max-height: 90%;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            position: relative;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 10px;
+        }
+
+        .modal-title {
+            font-size: 1.4rem;
+            color: #38bdf8;
+        }
+
+        .close-btn {
+            background: #334155;
+            color: #94a3b8;
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close-btn:hover {
+            background: #ef4444;
+            color: white;
+        }
+
+        .modal-body {
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        /* === 装備モーダル専用スタイル === */
+        .equip-section-title {
+            font-size: 1rem;
+            color: #94a3b8;
+            margin-bottom: 5px;
+        }
+
+        .equipped-slots-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            background: #0f172a;
+            padding: 12px;
+            border-radius: 10px;
+        }
+
+        .equip-slot {
+            height: 70px;
+            border: 2px dashed #475569;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            color: #64748b;
+            position: relative;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .equip-slot.filled {
+            border: 2px solid #8b5cf6;
+            background: rgba(139, 92, 246, 0.1);
+        }
+
+        .equip-slot img {
+            max-width: 40px;
+            max-height: 40px;
+            object-fit: contain;
+        }
+
+        .equip-slot-name {
+            font-size: 0.75rem;
+            color: #cbd5e1;
+            margin-top: 2px;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 90%;
+        }
+
+        .search-bar-box {
+            display: flex;
+            gap: 10px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 10px 14px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            color: white;
+            font-size: 0.95rem;
+        }
+
+        .slime-list-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            max-height: 240px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        .slime-card {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            position: relative;
+        }
+
+        .slime-card.equipped-active {
+            border-color: #8b5cf6;
+            box-shadow: 0 0 8px rgba(139, 92, 246, 0.4);
+        }
+
+        .slime-img {
+            width: 60px;
+            height: 60px;
+            object-fit: contain;
+        }
+
+        .slime-name {
+            font-weight: bold;
+            font-size: 1rem;
+            color: #f8fafc;
+        }
+
+        .slime-stats {
+            width: 100%;
+            font-size: 0.75rem;
+            color: #94a3b8;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3px;
+            background: #1e293b;
+            padding: 6px;
+            border-radius: 6px;
+        }
+
+        .slime-ability {
+            grid-column: span 2;
+            color: #38bdf8;
+        }
+
+        .equip-toggle-btn {
+            width: 100%;
+            padding: 6px;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-equip-action {
+            background: #8b5cf6;
+            color: white;
+        }
+
+        .btn-equip-action:hover {
+            background: #7c3aed;
+        }
+
+        .btn-unequip-action {
+            background: #475569;
+            color: #cbd5e1;
+        }
+
+        .btn-unequip-action:hover {
+            background: #ef4444;
+            color: white;
+        }
+
+        /* モード選択・ショップ開発中表示 */
+        .mode-selection-container {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            padding: 20px 0;
+        }
+
+        .dev-badge {
+            display: inline-block;
+            background: #f59e0b;
+            color: #0f172a;
+            font-size: 0.75rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-left: 6px;
+        }
+
+        .dev-message-box {
+            text-align: center;
+            padding: 30px;
+            color: #cbd5e1;
+            font-size: 1.1rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app">
+
+        <!-- 1. 初回名前入力画面 -->
+        <div id="name-input-screen" class="screen hidden">
+            <h2 class="welcome-title">⚔️ バトルスライムへようこそ！ ⚔️</h2>
+            <div class="input-group">
+                <label for="initial-name-input" class="input-label">名前を入力してね（3文字以上12文字以下）</label>
+                <input type="text" id="initial-name-input" class="text-input" placeholder="例: スライム勇者" maxlength="12">
+                <div id="initial-name-error" class="error-message"></div>
+                <button id="initial-name-submit-btn" class="primary-btn">決定</button>
+            </div>
+        </div>
+
+        <!-- 2. ホーム画面 -->
+        <div id="home-screen" class="screen hidden">
+            <header class="home-header">
+                <h1 class="game-title">バトルスライム</h1>
+                <div class="header-user-info">
+                    <span id="player-display-name" class="player-name-text">----</span>
+                    <button id="btn-settings" class="icon-btn" title="設定">⚙️</button>
+                </div>
+            </header>
+
+            <main class="home-main-menu">
+                <button id="btn-play" class="menu-btn play-btn">🎮 プレイ</button>
+                <button id="btn-shop" class="menu-btn shop-btn">🛒 ショップ</button>
+                <button id="btn-equip" class="menu-btn equip-btn">🎒 装備</button>
+            </main>
+
+            <div></div> <!-- フッターレイアウト調整用ダミー -->
+        </div>
+
+        <!-- 3. 設定モーダル -->
+        <div id="modal-settings" class="modal-overlay hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">⚙️ 設定</h3>
+                    <button id="close-settings-btn" class="close-btn">✕</button>
+                </div>
+                <div class="modal-body">
+                    <div class="input-group" style="max-width: 100%;">
+                        <label for="settings-name-input" class="input-label">名前の変更（3文字以上12文字以下）</label>
+                        <input type="text" id="settings-name-input" class="text-input" maxlength="12">
+                        <div id="settings-name-error" class="error-message"></div>
+                        <button id="save-settings-btn" class="primary-btn">変更を保存</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. プレイ選択モーダル -->
+        <div id="modal-play" class="modal-overlay hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">🎮 モード選択</h3>
+                    <button id="close-play-btn" class="close-btn">✕</button>
+                </div>
+                <div class="modal-body">
+                    <div class="mode-selection-container">
+                        <button class="primary-btn" style="padding: 20px 30px; font-size: 1.2rem;">
+                            ⚔️ メインモード <span class="dev-badge">開発中</span>
+                        </button>
+                        <button class="primary-btn" style="padding: 20px 30px; font-size: 1.2rem; background: linear-gradient(135deg, #64748b 0%, #475569 100%);">
+                            🎯 サブモード <span class="dev-badge">開発中</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. ショップモーダル -->
+        <div id="modal-shop" class="modal-overlay hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">🛒 ショップ</h3>
+                    <button id="close-shop-btn" class="close-btn">✕</button>
+                </div>
+                <div class="modal-body">
+                    <div class="dev-message-box">
+                        <p>🛒 ショップは現在準備・開発中です！</p>
+                        <p style="font-size: 0.9rem; margin-top: 10px; color: #94a3b8;">今後のアップデートをお楽しみに！</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6. 装備モーダル -->
+        <div id="modal-equip" class="modal-overlay hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">🎒 スライム装備</h3>
+                    <button id="close-equip-btn" class="close-btn">✕</button>
+                </div>
+                <div class="modal-body">
+                    <!-- 現在の装備スロット（最大8体） -->
+                    <div>
+                        <div class="equip-section-title">装備中のスライム（最大8体）</div>
+                        <div id="equipped-slots-grid" class="equipped-slots-container">
+                            <!-- JS側で動的生成 -->
+                        </div>
+                    </div>
+
+                    <!-- スライム検索 -->
+                    <div class="search-bar-box">
+                        <input type="text" id="slime-search-input" class="search-input" placeholder="🔍 スライムを名前で検索...">
+                    </div>
+
+                    <!-- 所持スライム一覧 -->
+                    <div>
+                        <div class="equip-section-title">所持スライム一覧</div>
+                        <div id="owned-slime-list" class="slime-list-grid">
+                            <!-- JS側で動的生成 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- キャラクター構造・ステータス設定スクリプトの読み込み -->
+    <script src="sub.js"></script>
+
+    <!-- メイン操作・UI連動スクリプト -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // データ初期化
+            PlayerDataManager.load();
+
+            // DOM要素参照
+            const nameInputScreen = document.getElementById('name-input-screen');
+            const homeScreen = document.getElementById('home-screen');
+            
+            const initialNameInput = document.getElementById('initial-name-input');
+            const initialNameError = document.getElementById('initial-name-error');
+            const initialNameSubmitBtn = document.getElementById('initial-name-submit-btn');
+            
+            const playerDisplayName = document.getElementById('player-display-name');
+            const btnSettings = document.getElementById('btn-settings');
+            const btnPlay = document.getElementById('btn-play');
+            const btnShop = document.getElementById('btn-shop');
+            const btnEquip = document.getElementById('btn-equip');
+
+            const modalSettings = document.getElementById('modal-settings');
+            const settingsNameInput = document.getElementById('settings-name-input');
+            const settingsNameError = document.getElementById('settings-name-error');
+            const saveSettingsBtn = document.getElementById('save-settings-btn');
+            const closeSettingsBtn = document.getElementById('close-settings-btn');
+
+            const modalPlay = document.getElementById('modal-play');
+            const closePlayBtn = document.getElementById('close-play-btn');
+
+            const modalShop = document.getElementById('modal-shop');
+            const closeShopBtn = document.getElementById('close-shop-btn');
+
+            const modalEquip = document.getElementById('modal-equip');
+            const closeEquipBtn = document.getElementById('close-equip-btn');
+            const slimeSearchInput = document.getElementById('slime-search-input');
+            const equippedSlotsGrid = document.getElementById('equipped-slots-grid');
+            const ownedSlimeList = document.getElementById('owned-slime-list');
+
+            /**
+             * 初期起動チェック
+             */
+            function checkInitialFlow() {
+                if (PlayerDataManager.hasName()) {
+                    showHomeScreen();
+                } else {
+                    showNameInputScreen();
+                }
+            }
+
+            /**
+             * 名前入力画面の表示
+             */
+            function showNameInputScreen() {
+                homeScreen.classList.add('hidden');
+                nameInputScreen.classList.remove('hidden');
+            }
+
+            /**
+             * ホーム画面の表示
+             */
+            function showHomeScreen() {
+                nameInputScreen.classList.add('hidden');
+                homeScreen.classList.remove('hidden');
+                playerDisplayName.textContent = PlayerDataManager.getName();
+            }
+
+            /**
+             * 名前のバリデーション
+             */
+            function validateName(name) {
+                if (!name || name.trim().length === 0) {
+                    return '名前を入力してください。';
+                }
+                const trimmed = name.trim();
+                if (trimmed.length < 3 || trimmed.length > 12) {
+                    return '名前は3文字以上12文字以下で入力してください。';
+                }
+                return null;
+            }
+
+            // 初回名前登録ボタンのクリックイベント
+            initialNameSubmitBtn.addEventListener('click', () => {
+                const value = initialNameInput.value;
+                const error = validateName(value);
+                if (error) {
+                    initialNameError.textContent = error;
+                } else {
+                    initialNameError.textContent = '';
+                    PlayerDataManager.setName(value.trim());
+                    showHomeScreen();
+                }
+            });
+
+            // 設定ボタン押下時
+            btnSettings.addEventListener('click', () => {
+                settingsNameInput.value = PlayerDataManager.getName();
+                settingsNameError.textContent = '';
+                modalSettings.classList.remove('hidden');
+            });
+
+            closeSettingsBtn.addEventListener('click', () => {
+                modalSettings.classList.add('hidden');
+            });
+
+            // 設定保存ボタン
+            saveSettingsBtn.addEventListener('click', () => {
+                const value = settingsNameInput.value;
+                const error = validateName(value);
+                if (error) {
+                    settingsNameError.textContent = error;
+                } else {
+                    settingsNameError.textContent = '';
+                    PlayerDataManager.setName(value.trim());
+                    playerDisplayName.textContent = PlayerDataManager.getName();
+                    modalSettings.classList.add('hidden');
+                }
+            });
+
+            // プレイボタン押下時
+            btnPlay.addEventListener('click', () => {
+                modalPlay.classList.remove('hidden');
+            });
+            closePlayBtn.addEventListener('click', () => {
+                modalPlay.classList.add('hidden');
+            });
+
+            // ショップボタン押下時
+            btnShop.addEventListener('click', () => {
+                modalShop.classList.remove('hidden');
+            });
+            closeShopBtn.addEventListener('click', () => {
+                modalShop.classList.add('hidden');
+            });
+
+            // 装備ボタン押下時
+            btnEquip.addEventListener('click', () => {
+                renderEquipModal();
+                modalEquip.classList.remove('hidden');
+            });
+            closeEquipBtn.addEventListener('click', () => {
+                modalEquip.classList.add('hidden');
+            });
+
+            // 検索入力変更時
+            slimeSearchInput.addEventListener('input', () => {
+                renderOwnedSlimes(slimeSearchInput.value);
+            });
+
+            /**
+             * 装備画面（スロットおよび所持一覧）の描画更新
+             */
+            function renderEquipModal() {
+                renderEquippedSlots();
+                renderOwnedSlimes(slimeSearchInput.value);
+            }
+
+            /**
+             * 装備枠（最大8スロット）の描画
+             */
+            function renderEquippedSlots() {
+                equippedSlotsGrid.innerHTML = '';
+                const equippedList = PlayerDataManager.getEquippedSlimes();
+
+                for (let i = 0; i < 8; i++) {
+                    const slotEl = document.createElement('div');
+                    slotEl.className = 'equip-slot';
+
+                    if (i < equippedList.length) {
+                        const slime = equippedList[i];
+                        slotEl.classList.add('filled');
+                        
+                        const img = document.createElement('img');
+                        img.src = slime.image;
+                        img.alt = slime.name;
+                        
+                        const nameSpan = document.createElement('span');
+                        nameSpan.className = 'equip-slot-name';
+                        nameSpan.textContent = slime.name;
+
+                        slotEl.appendChild(img);
+                        slotEl.appendChild(nameSpan);
+                    } else {
+                        slotEl.textContent = `枠 ${i + 1}`;
+                    }
+
+                    equippedSlotsGrid.appendChild(slotEl);
+                }
+            }
+
+            /**
+             * 所持スライム一覧（検索対応）の描画
+             */
+            function renderOwnedSlimes(keyword = '') {
+                ownedSlimeList.innerHTML = '';
+                const slimes = PlayerDataManager.searchOwnedSlimes(keyword);
+
+                if (slimes.length === 0) {
+                    ownedSlimeList.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #64748b; padding: 20px;">該当するスライムが見つかりません。</div>';
+                    return;
+                }
+
+                slimes.forEach(slime => {
+                    const isEquipped = PlayerDataManager.isEquipped(slime.id);
+
+                    const card = document.createElement('div');
+                    card.className = `slime-card ${isEquipped ? 'equipped-active' : ''}`;
+
+                    card.innerHTML = `
+                        <img src="${slime.image}" alt="${slime.name}" class="slime-img">
+                        <div class="slime-name">${slime.name}</div>
+                        <div class="slime-stats">
+                            <div>HP: ${slime.hp}</div>
+                            <div>攻撃: ${slime.attack}</div>
+                            <div>防御: ${slime.defense}</div>
+                            <div>CT: ${slime.cooldown}s</div>
+                            <div>射程: ${slime.range}</div>
+                            <div class="slime-ability">能力: ${slime.ability}</div>
+                        </div>
+                        <button class="equip-toggle-btn ${isEquipped ? 'btn-unequip-action' : 'btn-equip-action'}">
+                            ${isEquipped ? '装備解除' : '装備する'}
+                        </button>
+                    `;
+
+                    const btn = card.querySelector('.equip-toggle-btn');
+                    btn.addEventListener('click', () => {
+                        const result = PlayerDataManager.toggleEquip(slime.id);
+                        if (!result.success) {
+                            alert(result.message);
+                        } else {
+                            renderEquipModal();
+                        }
+                    });
+
+                    ownedSlimeList.appendChild(card);
+                });
+            }
+
+            // アプリ開始
+            checkInitialFlow();
+        });
+    </script>
+</body>
+</html>
