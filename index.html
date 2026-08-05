@@ -5,13 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>バトルスライム</title>
     <style>
-        /* 全体の基本設定（ブロスタ風・提供画像風のポップで太い枠線のUI） */
+        /* 全体の基本設定（ブロスタ風・ポップで太い枠線のUI） */
         body {
             margin: 0;
             padding: 0;
             width: 100vw;
             height: 100vh;
-            background-color: #87CEEB; /* 画像の水色背景 */
+            background-color: #87CEEB;
             font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
             font-weight: 900;
             overflow: hidden;
@@ -59,6 +59,7 @@
         .btn-blue { background-color: #3498DB; color: #FFF; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; }
         .btn-green { background-color: #2ECC71; }
         .btn-red { background-color: #E74C3C; color: #FFF; }
+        .btn-gray { background-color: #95A5A6; color: #FFF; }
 
         /* 名前入力画面のスタイル */
         #name-input-container {
@@ -75,7 +76,7 @@
             font-size: 20px;
         }
 
-        #player-name-input {
+        #player-name-input, .custom-input {
             border: 4px solid #000;
             border-radius: 6px;
             padding: 10px;
@@ -135,11 +136,41 @@
             width: 300px;
         }
 
+        /* プレイモード画面（全画面）のスタイル */
+        .play-mode-container {
+            display: flex;
+            gap: 40px;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .mode-btn {
+            width: 350px;
+            height: 450px;
+            font-size: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 20px;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .mode-title {
+            font-size: 48px;
+            margin-bottom: 30px;
+            color: #FFF;
+            text-shadow: -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000;
+        }
+
         /* 装備画面のスタイル */
         .equip-container {
             width: 90%;
             height: 90%;
-            background-color: #A9DFBF; /* 画像の緑フィールド */
+            background-color: #A9DFBF;
             border: 6px solid #000;
             border-radius: 16px;
             display: flex;
@@ -151,10 +182,11 @@
 
         .close-btn {
             position: absolute;
-            top: 10px;
-            right: 10px;
-            padding: 5px 15px;
-            font-size: 16px;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            font-size: 18px;
+            z-index: 10;
         }
 
         .section-title {
@@ -240,7 +272,7 @@
             color: #333;
         }
 
-        /* モーダル用 */
+        /* モーダル用（設定・詳細・メッセージ） */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; width: 100vw; height: 100vh;
@@ -260,6 +292,19 @@
             display: flex;
             flex-direction: column;
             gap: 15px;
+            box-shadow: 0 8px 0 #000;
+        }
+
+        /* キャラクター詳細テキスト */
+        .detail-text-box {
+            font-size: 18px;
+            text-align: left;
+            line-height: 1.8;
+            margin: 15px 0;
+            background-color: #E8F8F5;
+            padding: 15px;
+            border: 4px solid #000;
+            border-radius: 8px;
         }
     </style>
 </head>
@@ -291,6 +336,16 @@
         </div>
     </div>
 
+    <!-- プレイモード選択画面（全画面） -->
+    <div id="screen-play" class="screen">
+        <button class="btn btn-red close-btn" id="btn-close-play">ホームに戻る</button>
+        <div class="mode-title">モード選択</div>
+        <div class="play-mode-container">
+            <button class="btn btn-yellow mode-btn" id="btn-main-mode">メインモード</button>
+            <button class="btn btn-blue mode-btn" id="btn-sub-mode">サブモード</button>
+        </div>
+    </div>
+
     <!-- 装備画面 -->
     <div id="screen-equip" class="screen">
         <div class="equip-container">
@@ -313,13 +368,42 @@
         </div>
     </div>
 
-    <!-- プレイモード選択モーダル -->
-    <div id="modal-play-mode" class="modal-overlay">
-        <div class="modal-content">
-            <h2>モード選択</h2>
-            <button class="btn btn-yellow" onclick="alert('準備中')">メインモード</button>
-            <button class="btn btn-blue" onclick="alert('準備中')">サブモード</button>
-            <button class="btn btn-red" id="btn-close-play-modal">閉じる</button>
+    <!-- 設定モーダル（名前変更） -->
+    <div id="modal-settings" class="modal-overlay">
+        <div class="modal-content" style="min-width: 300px;">
+            <h2 style="margin-top: 0;">名前の変更</h2>
+            <input type="text" id="settings-name-input" class="custom-input" placeholder="新しい名前 (3〜12文字)" maxlength="12" style="width: 90%; margin: 0 auto 15px auto;">
+            <div style="display: flex; gap: 15px; justify-content: center;">
+                <button class="btn btn-red" id="btn-close-settings" style="padding: 10px 20px; font-size: 18px;">キャンセル</button>
+                <button class="btn btn-yellow" id="btn-update-name" style="padding: 10px 20px; font-size: 18px;">変更する</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- キャラクター詳細モーダル（アラートの代わり） -->
+    <div id="modal-chara-detail" class="modal-overlay">
+        <div class="modal-content" style="width: 80%; max-width: 400px;">
+            <h2 id="detail-name" style="margin-top: 0; font-size: 28px;">名前</h2>
+            <img id="detail-image" src="" alt="" style="width: 120px; height: 120px; margin: 0 auto; display: block; object-fit: contain;">
+            
+            <div class="detail-text-box">
+                <div><strong>❤️ HP:</strong> <span id="detail-hp"></span></div>
+                <div style="margin-top: 5px;"><strong>⚔️ 攻撃力:</strong> <span id="detail-attack"></span></div>
+                <div style="margin-top: 15px; padding-top: 15px; border-top: 2px dashed #000;">
+                    <strong>✨ 能力:</strong><br>
+                    <span id="detail-ability" style="display: inline-block; margin-top: 5px;"></span>
+                </div>
+            </div>
+
+            <button class="btn btn-red" id="btn-close-detail">閉じる</button>
+        </div>
+    </div>
+
+    <!-- 汎用メッセージモーダル（アラートの代わり） -->
+    <div id="modal-message" class="modal-overlay">
+        <div class="modal-content" style="min-width: 250px;">
+            <h3 id="message-text" style="line-height: 1.5; margin-bottom: 20px;">メッセージ</h3>
+            <button class="btn btn-blue" id="btn-close-message">OK</button>
         </div>
     </div>
 
