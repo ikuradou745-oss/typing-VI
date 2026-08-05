@@ -77,11 +77,13 @@ const carryService = new BrainrotCarryService();
 const moneyController = new MoneyDisplayController('money-display');
 
 document.addEventListener('DOMContentLoaded', () => {
-    // 画面要素の取得
+    // ---- 画面要素の取得 ----
     const screenNameInput = document.getElementById('screen-name-input');
     const screenHome = document.getElementById('screen-home');
+    const screenPlay = document.getElementById('screen-play');
     const screenEquip = document.getElementById('screen-equip');
     
+    // ---- UI要素の取得 ----
     const inputName = document.getElementById('player-name-input');
     const btnDecideName = document.getElementById('btn-decide-name');
     const displayPlayerName = document.getElementById('display-player-name');
@@ -92,12 +94,39 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnEquip = document.getElementById('btn-equip');
     const btnCloseEquip = document.getElementById('btn-close-equip');
 
-    const modalPlayMode = document.getElementById('modal-play-mode');
-    const btnClosePlayModal = document.getElementById('btn-close-play-modal');
+    // プレイモード画面のボタン
+    const btnClosePlay = document.getElementById('btn-close-play');
+    const btnMainMode = document.getElementById('btn-main-mode');
+    const btnSubMode = document.getElementById('btn-sub-mode');
 
+    // 装備画面用
     const searchSlimeInput = document.getElementById('search-slime');
     const equippedList = document.getElementById('equipped-list');
     const ownedList = document.getElementById('owned-list');
+
+    // モーダル関連（設定）
+    const modalSettings = document.getElementById('modal-settings');
+    const settingsNameInput = document.getElementById('settings-name-input');
+    const btnUpdateName = document.getElementById('btn-update-name');
+    const btnCloseSettings = document.getElementById('btn-close-settings');
+
+    // モーダル関連（キャラ詳細）
+    const modalCharaDetail = document.getElementById('modal-chara-detail');
+    const btnCloseDetail = document.getElementById('btn-close-detail');
+    const detailName = document.getElementById('detail-name');
+    const detailImage = document.getElementById('detail-image');
+    const detailHp = document.getElementById('detail-hp');
+    const detailAttack = document.getElementById('detail-attack');
+    const detailAbility = document.getElementById('detail-ability');
+
+    // モーダル関連（汎用メッセージ）
+    const modalMessage = document.getElementById('modal-message');
+    const messageText = document.getElementById('message-text');
+    const btnCloseMessage = document.getElementById('btn-close-message');
+
+    // ========================================================================
+    // 基本関数
+    // ========================================================================
 
     // 画面切り替え関数
     function showScreen(screenElement) {
@@ -105,7 +134,17 @@ document.addEventListener('DOMContentLoaded', () => {
         screenElement.classList.add('active');
     }
 
-    // 初期化処理（名前登録済みかどうかで画面を出し分け）
+    // メッセージGUI表示関数（alertの代替）
+    function showMessage(text) {
+        messageText.innerHTML = text;
+        modalMessage.classList.add('active');
+    }
+
+    btnCloseMessage.addEventListener('click', () => {
+        modalMessage.classList.remove('active');
+    });
+
+    // 初期化処理
     function initGame() {
         moneyController.updateDisplay(); // 所持金表示を更新
         
@@ -117,44 +156,81 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 名前入力ロジック (3文字以上12文字以下)
-    function validateAndSaveName(nameString) {
+    // ========================================================================
+    // 名前入力・設定ロジック
+    // ========================================================================
+
+    function validateAndSaveName(nameString, isInitialRegistration) {
         const trimmedName = nameString.trim();
         if (trimmedName.length >= 3 && trimmedName.length <= 12) {
             gameData.savePlayerName(trimmedName);
             displayPlayerName.textContent = trimmedName;
-            showScreen(screenHome);
+            
+            if (isInitialRegistration) {
+                showScreen(screenHome);
+            }
+            return true;
         } else {
-            alert('名前は3文字以上、12文字以下で入力してください。');
+            showMessage('名前は3文字以上、<br>12文字以下で入力してください。');
+            return false;
         }
     }
 
+    // 初回名前決定
     btnDecideName.addEventListener('click', () => {
-        validateAndSaveName(inputName.value);
+        validateAndSaveName(inputName.value, true);
     });
 
-    // 設定（⚙️）ボタンでの名前変更ロジック
+    // 設定ボタンでGUIモーダルを開く
     btnSettings.addEventListener('click', () => {
-        const newName = prompt('新しい名前を入力してください（3文字以上12文字以下）', gameData.getPlayerName());
-        if (newName !== null) {
-            validateAndSaveName(newName);
+        settingsNameInput.value = gameData.getPlayerName() || "";
+        modalSettings.classList.add('active');
+    });
+
+    // 設定モーダルを閉じる
+    btnCloseSettings.addEventListener('click', () => {
+        modalSettings.classList.remove('active');
+    });
+
+    // モーダル内での名前更新
+    btnUpdateName.addEventListener('click', () => {
+        const success = validateAndSaveName(settingsNameInput.value, false);
+        if (success) {
+            modalSettings.classList.remove('active');
+            showMessage('名前を変更しました！');
         }
     });
 
-    // ホーム画面のボタンロジック
+    // ========================================================================
+    // ホーム画面とプレイモードのロジック
+    // ========================================================================
+
+    // プレイ画面（全画面）を開く
     btnPlay.addEventListener('click', () => {
-        modalPlayMode.classList.add('active');
+        showScreen(screenPlay);
     });
 
-    btnClosePlayModal.addEventListener('click', () => {
-        modalPlayMode.classList.remove('active');
+    // プレイ画面からホームに戻る
+    btnClosePlay.addEventListener('click', () => {
+        showScreen(screenHome);
+    });
+
+    btnMainMode.addEventListener('click', () => {
+        showMessage('メインモードは<br>準備中です！');
+    });
+
+    btnSubMode.addEventListener('click', () => {
+        showMessage('サブモードは<br>準備中です！');
     });
 
     btnShop.addEventListener('click', () => {
-        alert('準備中');
+        showMessage('ショップは<br>準備中です！');
     });
 
+    // ========================================================================
     // 装備画面のロジック
+    // ========================================================================
+
     btnEquip.addEventListener('click', () => {
         renderEquipScreen();
         showScreen(screenEquip);
@@ -216,13 +292,23 @@ document.addEventListener('DOMContentLoaded', () => {
         card.appendChild(img);
         card.appendChild(nameSpan);
 
-        // クリックで詳細（ステータス）を表示するデモ
+        // クリックで詳細（GUIモーダル）を表示
         card.addEventListener('click', () => {
-            alert(`【${chara.name}】\nHP: ${chara.hp}\n攻撃力: ${chara.attack}\n能力: ${chara.ability}`);
+            detailName.textContent = chara.name;
+            detailImage.src = chara.image;
+            detailHp.textContent = chara.hp;
+            detailAttack.textContent = chara.attack;
+            detailAbility.textContent = chara.ability;
+            modalCharaDetail.classList.add('active');
         });
 
         return card;
     }
+
+    // 詳細モーダルを閉じる
+    btnCloseDetail.addEventListener('click', () => {
+        modalCharaDetail.classList.remove('active');
+    });
 
     // 検索窓のリアルタイムフィルタリング
     searchSlimeInput.addEventListener('input', (e) => {
