@@ -3,739 +3,327 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>タイピングゲーム</title>
+    <title>バトルスライム</title>
     <style>
-        /* =========================================
-           基本設定・UIスタイル（スクリーンショット準拠）
-           ========================================= */
-        @import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@800&display=swap');
-
-        * {
-            box-sizing: border-box;
-            user-select: none;
-            font-family: 'M PLUS Rounded 1c', sans-serif;
-        }
-
+        /* 全体の基本設定（ブロスタ風・提供画像風のポップで太い枠線のUI） */
         body {
             margin: 0;
             padding: 0;
-            background-color: #70d6ff;
-            overflow: hidden;
             width: 100vw;
             height: 100vh;
+            background-color: #87CEEB; /* 画像の水色背景 */
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+            font-weight: 900;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            user-select: none;
         }
 
-        /* 画面切り替え用 */
-        .game-screen {
-            display: none;
+        /* 画面コンテナ */
+        .screen {
             width: 100%;
             height: 100%;
-            position: absolute;
-            top: 0;
-            left: 0;
-            background-image: linear-gradient(180deg, #87CEEB 0%, #4682B4 100%);
-        }
-
-        .game-screen.active {
-            display: flex;
+            display: none;
+            position: relative;
             flex-direction: column;
+            justify-content: center;
+            align-items: center;
         }
 
-        /* 共通パネルスタイル（太い黒枠と水色背景） */
-        .ui-panel {
-            background-color: #4dd2ff;
-            border: 4px solid #000000;
-            border-radius: 4px;
-            box-shadow: inset -4px -4px 0px rgba(0, 0, 0, 0.15), 4px 4px 0px rgba(0, 0, 0, 0.5);
-            padding: 20px;
+        .screen.active {
+            display: flex;
         }
 
-        /* 共通ボタンスタイル */
-        .ui-button {
-            background-color: #ff3333;
-            color: #ffffff;
-            border: 4px solid #000000;
+        /* 汎用ボタン（太枠・シャドウ付き） */
+        .btn {
+            border: 4px solid #000;
             border-radius: 8px;
             padding: 15px 30px;
             font-size: 24px;
-            font-weight: bold;
+            font-weight: 900;
+            color: #000;
             cursor: pointer;
-            text-shadow: 2px 2px 0px #000000, -2px -2px 0px #000000, 2px -2px 0px #000000, -2px 2px 0px #000000;
-            box-shadow: inset -4px -4px 0px rgba(0, 0, 0, 0.3);
-            transition: transform 0.1s;
-        }
-
-        .ui-button:active {
-            transform: scale(0.95);
-        }
-
-        .ui-button.blue { background-color: #3388ff; }
-        .ui-button.green { background-color: #33cc33; }
-        .ui-button.yellow { background-color: #ffcc00; color: #000000; text-shadow: none; }
-
-        /* 入力フィールド */
-        .ui-input {
-            border: 4px solid #000000;
-            background-color: #ffffff;
-            padding: 15px;
-            font-size: 24px;
-            border-radius: 4px;
-            width: 80%;
-            max-width: 400px;
+            box-shadow: 0 6px 0 #000;
+            transition: transform 0.1s, box-shadow 0.1s;
             text-align: center;
+        }
+        
+        .btn:active {
+            transform: translateY(6px);
+            box-shadow: 0 0 0 #000;
+        }
+
+        .btn-yellow { background-color: #F1C40F; }
+        .btn-blue { background-color: #3498DB; color: #FFF; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; }
+        .btn-green { background-color: #2ECC71; }
+        .btn-red { background-color: #E74C3C; color: #FFF; }
+
+        /* 名前入力画面のスタイル */
+        #name-input-container {
+            background-color: #FFF;
+            border: 4px solid #000;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 8px 0 #000;
+        }
+
+        #name-input-container h1 {
+            margin-top: 0;
+            font-size: 20px;
+        }
+
+        #player-name-input {
+            border: 4px solid #000;
+            border-radius: 6px;
+            padding: 10px;
+            font-size: 20px;
+            font-weight: bold;
+            width: 80%;
             margin-bottom: 20px;
+            text-align: center;
             outline: none;
         }
 
-        /* =========================================
-           各画面のレイアウト
-           ========================================= */
-        /* 初回起動＆設定画面 */
-        .center-container {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 100%;
-            width: 100%;
-        }
-
-        .title-text {
-            color: #ffffff;
-            font-size: 32px;
-            text-shadow: 3px 3px 0px #000000, -3px -3px 0px #000000, 3px -3px 0px #000000, -3px 3px 0px #000000;
-            margin-bottom: 30px;
-            text-align: center;
-        }
-
-        /* ホーム画面 */
-        #homeScreen .header {
-            display: flex;
-            justify-content: flex-end;
-            align-items: center;
-            padding: 20px;
-            width: 100%;
-        }
-
-        .player-info-container {
-            display: flex;
-            align-items: center;
-            background-color: #ffffff;
-            border: 4px solid #000000;
-            border-radius: 20px;
-            padding: 5px 20px;
-            box-shadow: 2px 2px 0px #000000;
-        }
-
-        #displayName {
-            font-size: 24px;
-            font-weight: bold;
-            margin-right: 15px;
-        }
-
-        #settingsButton {
-            background: none;
-            border: none;
-            font-size: 30px;
-            cursor: pointer;
-            padding: 0;
-            transition: transform 0.2s;
-        }
-
-        #settingsButton:hover {
-            transform: rotate(45deg);
-        }
-
-        .main-menu-buttons {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            flex-grow: 1;
-            gap: 30px;
-        }
-
-        .main-menu-buttons .ui-button {
-            width: 300px;
-            font-size: 32px;
-        }
-
-        /* モーダル背景 */
-        .modal-overlay {
-            display: none;
+        /* ホーム画面のスタイル */
+        .top-bar {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: space-between;
+            padding: 15px;
+            box-sizing: border-box;
+        }
+
+        .money-display {
+            background-color: #F1C40F;
+            border: 4px solid #000;
+            border-radius: 8px;
+            padding: 5px 15px;
+            font-size: 20px;
+            box-shadow: 0 4px 0 #000;
+        }
+
+        .player-info {
+            display: flex;
+            align-items: center;
+            background-color: #FFF;
+            border: 4px solid #000;
+            border-radius: 8px;
+            padding: 5px 15px;
+            box-shadow: 0 4px 0 #000;
+            gap: 10px;
+        }
+
+        .settings-icon {
+            font-size: 24px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .settings-icon:hover {
+            transform: rotate(45deg);
+        }
+
+        .home-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 300px;
+        }
+
+        /* 装備画面のスタイル */
+        .equip-container {
+            width: 90%;
+            height: 90%;
+            background-color: #A9DFBF; /* 画像の緑フィールド */
+            border: 6px solid #000;
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 5px 15px;
+            font-size: 16px;
+        }
+
+        .section-title {
+            font-size: 24px;
+            border-bottom: 4px solid #000;
+            margin-bottom: 15px;
+            padding-bottom: 5px;
+        }
+
+        .equipped-area {
+            flex: 1;
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+        }
+
+        .owned-area {
+            flex: 2;
+            background-color: rgba(255, 255, 255, 0.5);
+            border: 4px solid #000;
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .search-bar {
+            border: 4px solid #000;
+            border-radius: 6px;
+            padding: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            outline: none;
+        }
+
+        .character-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            overflow-y: auto;
+        }
+
+        .chara-card {
+            width: 100px;
+            height: 130px;
+            background-color: #FFF;
+            border: 4px solid #000;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 5px;
+            box-shadow: 0 4px 0 #000;
+            cursor: pointer;
+        }
+        
+        .chara-card img {
+            width: 60px;
+            height: 60px;
+            object-fit: contain;
+            margin-bottom: 5px;
+        }
+
+        .chara-card .chara-name {
+            font-size: 14px;
+            text-align: center;
+            word-break: break-all;
+        }
+
+        .chara-slot {
+            min-width: 100px;
+            height: 130px;
+            background-color: rgba(0,0,0,0.1);
+            border: 4px dashed #000;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 14px;
+            color: #333;
+        }
+
+        /* モーダル用 */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.6);
+            display: none;
             justify-content: center;
             align-items: center;
             z-index: 100;
         }
-
-        .modal-overlay.active {
-            display: flex;
-        }
-
+        .modal-overlay.active { display: flex; }
         .modal-content {
-            width: 500px;
+            background: #FFF;
+            border: 4px solid #000;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            gap: 20px;
-        }
-
-        /* =========================================
-           装備画面 (Equipment Screen)
-           ========================================= */
-        #equipmentScreen {
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        .screen-header-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            width: 100%;
-        }
-
-        .section-title {
-            color: #ffffff;
-            font-size: 24px;
-            text-shadow: 2px 2px 0px #000000, -2px -2px 0px #000000, 2px -2px 0px #000000, -2px 2px 0px #000000;
-            margin: 0 0 10px 0;
-        }
-
-        /* 装備スロット (最大8キャラ) */
-        .equipped-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
             gap: 15px;
-            width: 100%;
-            background-color: #1a8cff;
-        }
-
-        .character-slot {
-            background-color: #80dfff;
-            border: 4px solid #000000;
-            height: 120px;
-            position: relative;
-            cursor: pointer;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            box-shadow: inset -2px -2px 0px rgba(0,0,0,0.2);
-            overflow: hidden;
-        }
-
-        .character-slot:hover {
-            background-color: #b3ecff;
-        }
-
-        .character-slot .slot-number {
-            position: absolute;
-            top: 2px;
-            right: 4px;
-            font-size: 12px;
-            font-weight: bold;
-            color: #ffffff;
-            text-shadow: 1px 1px 0px #000;
-        }
-
-        .character-slot img {
-            width: 60px;
-            height: 60px;
-            object-fit: contain;
-        }
-
-        .character-slot .char-name {
-            position: absolute;
-            bottom: 2px;
-            left: 4px;
-            font-size: 14px;
-            font-weight: bold;
-            color: #ffffff;
-            text-shadow: 1px 1px 0px #000;
-            white-space: nowrap;
-        }
-
-        .character-slot .char-stats {
-            position: absolute;
-            top: 2px;
-            left: 4px;
-            font-size: 12px;
-            color: #ff3333;
-            font-weight: bold;
-            text-shadow: 1px 1px 0px #000;
-        }
-
-        /* インベントリ (所持キャラ) */
-        .inventory-container {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .search-bar-container {
-            display: flex;
-            margin-bottom: 15px;
-            gap: 10px;
-        }
-
-        .search-input {
-            flex-grow: 1;
-            border: 4px solid #000000;
-            padding: 10px;
-            font-size: 18px;
-            border-radius: 4px;
-            outline: none;
-        }
-
-        .inventory-grid {
-            display: grid;
-            grid-template-columns: repeat(6, 1fr);
-            gap: 15px;
-            overflow-y: auto;
-            padding-right: 10px;
-        }
-
-        /* 戻るボタン専用 */
-        .return-button {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
         }
     </style>
-    <!-- 外部スクリプトの読み込み -->
-    <script src="sub.js"></script>
 </head>
 <body>
 
-    <!-- 初回起動時：名前入力画面 -->
-    <div id="registrationScreen" class="game-screen center-container">
-        <h1 class="title-text">名前を入力してね<br>（3文字以上12文字以下）</h1>
-        <input type="text" id="playerNameInput" class="ui-input" placeholder="名前を入力..." maxlength="12">
-        <button id="submitNameButton" class="ui-button green">決定</button>
+    <!-- 名前入力画面（初回のみ） -->
+    <div id="screen-name-input" class="screen">
+        <div id="name-input-container">
+            <h1>名前を入力してね<br>（3文字以上12文字以下）</h1>
+            <input type="text" id="player-name-input" placeholder="名前を入力" maxlength="12">
+            <br>
+            <button class="btn btn-yellow" id="btn-decide-name">決定</button>
+        </div>
     </div>
 
     <!-- ホーム画面 -->
-    <div id="homeScreen" class="game-screen">
-        <div class="header">
-            <div class="player-info-container">
-                <span id="displayName">名無し</span>
-                <button id="settingsButton">⚙️</button>
+    <div id="screen-home" class="screen">
+        <div class="top-bar">
+            <div class="money-display" id="money-display">所持金 0円</div>
+            <div class="player-info">
+                <span id="display-player-name">プレイヤー</span>
+                <span class="settings-icon" id="btn-settings">⚙️</span>
             </div>
         </div>
-        <div class="main-menu-buttons">
-            <button id="playButton" class="ui-button blue">プレイ</button>
-            <button id="shopButton" class="ui-button yellow">ショップ</button>
-            <button id="equipmentButton" class="ui-button green">装備</button>
-        </div>
-    </div>
-
-    <!-- プレイモード選択モーダル -->
-    <div id="playModal" class="modal-overlay">
-        <div class="ui-panel modal-content">
-            <h2 class="title-text">モード選択</h2>
-            <button id="mainModeButton" class="ui-button blue" style="width: 100%;">メインモード</button>
-            <button id="subModeButton" class="ui-button green" style="width: 100%;">サブモード</button>
-            <button id="closePlayModalButton" class="ui-button" style="margin-top: 20px; background-color: #999;">閉じる</button>
-        </div>
-    </div>
-
-    <!-- 設定（名前変更）モーダル -->
-    <div id="settingsModal" class="modal-overlay">
-        <div class="ui-panel modal-content">
-            <h2 class="title-text">名前の変更</h2>
-            <input type="text" id="changeNameInput" class="ui-input" placeholder="新しい名前..." maxlength="12">
-            <button id="saveNewNameButton" class="ui-button green" style="width: 100%;">保存する</button>
-            <button id="closeSettingsModalButton" class="ui-button" style="margin-top: 10px; width: 100%; background-color: #999;">キャンセル</button>
+        <div class="home-menu">
+            <button class="btn btn-yellow" id="btn-play">プレイ</button>
+            <button class="btn btn-blue" id="btn-shop">ショップ</button>
+            <button class="btn btn-green" id="btn-equip">装備</button>
         </div>
     </div>
 
     <!-- 装備画面 -->
-    <div id="equipmentScreen" class="game-screen">
-        <div class="screen-header-row">
-            <h2 class="title-text" style="margin: 0; text-align: left;">装備中のキャラ (最大8体)</h2>
-        </div>
-        
-        <div class="ui-panel equipped-grid" id="equippedGrid">
-            <!-- JavaScriptで動的に8スロット生成されます -->
-        </div>
-
-        <div class="inventory-container">
-            <h2 class="title-text" style="margin: 10px 0; text-align: left;">所持しているスライム・キャラ</h2>
-            <div class="search-bar-container">
-                <input type="text" id="characterSearchInput" class="search-input" placeholder="名前を検索...">
-                <button id="searchButton" class="ui-button blue" style="padding: 10px 20px; font-size: 18px;">検索</button>
+    <div id="screen-equip" class="screen">
+        <div class="equip-container">
+            <button class="btn btn-red close-btn" id="btn-close-equip">戻る</button>
+            
+            <a name="Chara" id="Chara"></a> <!-- Chara Anchor Tool -->
+            
+            <div class="section-title">装備しているキャラ (最大8体)</div>
+            <div class="equipped-area" id="equipped-list">
+                <!-- Javascriptでスロットを生成します -->
             </div>
-            <div class="ui-panel inventory-grid" id="inventoryGrid" style="background-color: #66ccff;">
-                <!-- JavaScriptで動的に所持キャラが生成されます -->
+
+            <div class="owned-area">
+                <div class="section-title">持っているスライム</div>
+                <input type="text" id="search-slime" class="search-bar" placeholder="名前を検索してスライムを探す...">
+                <div class="character-grid" id="owned-list">
+                    <!-- Javascriptでキャラ一覧を生成します -->
+                </div>
             </div>
         </div>
-
-        <button id="returnToHomeButton" class="ui-button return-button">RETURN</button>
     </div>
 
-    <script>
-        /* =========================================
-           ゲームシステム・内部状態管理クラス
-           ========================================= */
-        class GameDataManager {
-            constructor() {
-                this.localSaveData = {};
-            }
-            saveData(key, value) {
-                localStorage.setItem(key, value);
-            }
-            loadData(key) {
-                return localStorage.getItem(key);
-            }
-        }
+    <!-- プレイモード選択モーダル -->
+    <div id="modal-play-mode" class="modal-overlay">
+        <div class="modal-content">
+            <h2>モード選択</h2>
+            <button class="btn btn-yellow" onclick="alert('準備中')">メインモード</button>
+            <button class="btn btn-blue" onclick="alert('準備中')">サブモード</button>
+            <button class="btn btn-red" id="btn-close-play-modal">閉じる</button>
+        </div>
+    </div>
 
-        class BrainrotCollectionService {
-            constructor() {
-                this.collectionDatabase = [];
-            }
-        }
-
-        class BrainrotCarryService {
-            constructor() {
-                this.currentCarryCapacity = 0;
-            }
-        }
-
-        class MoneyDisplayController {
-            constructor() {
-                this.currentMoneyAmount = 0;
-            }
-            updateMoneyDisplay() {
-                // 将来の拡張用メソッド
-            }
-        }
-
-        /* =========================================
-           メインロジックコントローラー
-           ========================================= */
-        document.addEventListener("DOMContentLoaded", () => {
-            const gameDataManager = new GameDataManager();
-            const collectionService = new BrainrotCollectionService();
-            const carryService = new BrainrotCarryService();
-            const moneyController = new MoneyDisplayController();
-
-            // 画面要素の取得
-            const registrationScreen = document.getElementById("registrationScreen");
-            const homeScreen = document.getElementById("homeScreen");
-            const equipmentScreen = document.getElementById("equipmentScreen");
-            
-            // 入力要素
-            const playerNameInput = document.getElementById("playerNameInput");
-            const submitNameButton = document.getElementById("submitNameButton");
-            const displayName = document.getElementById("displayName");
-            const changeNameInput = document.getElementById("changeNameInput");
-
-            // モーダル要素
-            const settingsModal = document.getElementById("settingsModal");
-            const playModal = document.getElementById("playModal");
-
-            // 装備画面用要素
-            const equippedGrid = document.getElementById("equippedGrid");
-            const inventoryGrid = document.getElementById("inventoryGrid");
-            const characterSearchInput = document.getElementById("characterSearchInput");
-
-            // 状態変数
-            let equippedCharacterIds = [];
-            let ownedCharacterIds = [];
-            const MAX_EQUIP_SLOTS = 8;
-
-            /**
-             * 指定した画面を表示し、他を非表示にする関数
-             */
-            function switchScreen(targetScreenElement) {
-                document.querySelectorAll('.game-screen').forEach(screen => {
-                    screen.classList.remove('active');
-                });
-                targetScreenElement.classList.add('active');
-            }
-
-            /**
-             * 名前のバリデーション処理（3文字以上12文字以下）
-             */
-            function validateNameLength(nameString) {
-                if (nameString.length >= 3 && nameString.length <= 12) {
-                    return true;
-                }
-                alert("名前は3文字以上12文字以下で入力してください。");
-                return false;
-            }
-
-            /**
-             * 初期化処理
-             */
-            function initializeGameSystem() {
-                const savedName = gameDataManager.loadData("playerName");
-                
-                // 所持キャラと装備キャラの初期化
-                const savedOwned = gameDataManager.loadData("ownedCharacters");
-                const savedEquipped = gameDataManager.loadData("equippedCharacters");
-
-                if (savedOwned) {
-                    ownedCharacterIds = JSON.parse(savedOwned);
-                } else {
-                    // 初期状態では「スライム」のみ所持
-                    ownedCharacterIds = ["slime"];
-                    gameDataManager.saveData("ownedCharacters", JSON.stringify(ownedCharacterIds));
-                }
-
-                if (savedEquipped) {
-                    equippedCharacterIds = JSON.parse(savedEquipped);
-                } else {
-                    // 初期状態では「スライム」のみ装備
-                    equippedCharacterIds = ["slime"];
-                    gameDataManager.saveData("equippedCharacters", JSON.stringify(equippedCharacterIds));
-                }
-
-                if (savedName) {
-                    displayName.textContent = savedName;
-                    switchScreen(homeScreen);
-                } else {
-                    switchScreen(registrationScreen);
-                }
-            }
-
-            // --- イベントリスナーの登録 ---
-
-            // 初回名前登録
-            submitNameButton.addEventListener("click", () => {
-                const inputName = playerNameInput.value.trim();
-                if (validateNameLength(inputName)) {
-                    gameDataManager.saveData("playerName", inputName);
-                    displayName.textContent = inputName;
-                    switchScreen(homeScreen);
-                }
-            });
-
-            // 設定（名前変更）モーダルを開く
-            document.getElementById("settingsButton").addEventListener("click", () => {
-                changeNameInput.value = gameDataManager.loadData("playerName") || "";
-                settingsModal.classList.add("active");
-            });
-
-            // 新しい名前を保存
-            document.getElementById("saveNewNameButton").addEventListener("click", () => {
-                const newName = changeNameInput.value.trim();
-                if (validateNameLength(newName)) {
-                    gameDataManager.saveData("playerName", newName);
-                    displayName.textContent = newName;
-                    settingsModal.classList.remove("active");
-                }
-            });
-
-            // 設定モーダルを閉じる
-            document.getElementById("closeSettingsModalButton").addEventListener("click", () => {
-                settingsModal.classList.remove("active");
-            });
-
-            // プレイボタン -> モーダル展開
-            document.getElementById("playButton").addEventListener("click", () => {
-                playModal.classList.add("active");
-            });
-
-            // プレイモード選択 -> 全て準備中
-            document.getElementById("mainModeButton").addEventListener("click", () => {
-                alert("準備中");
-            });
-            document.getElementById("subModeButton").addEventListener("click", () => {
-                alert("準備中");
-            });
-            document.getElementById("closePlayModalButton").addEventListener("click", () => {
-                playModal.classList.remove("active");
-            });
-
-            // ショップボタン -> 準備中
-            document.getElementById("shopButton").addEventListener("click", () => {
-                alert("準備中");
-            });
-
-            // 装備ボタン -> 装備画面へ遷移
-            document.getElementById("equipmentButton").addEventListener("click", () => {
-                switchScreen(equipmentScreen);
-                renderEquipmentScreen();
-            });
-
-            // 装備画面からホームへ戻る
-            document.getElementById("returnToHomeButton").addEventListener("click", () => {
-                switchScreen(homeScreen);
-            });
-
-            // 検索機能のリアルタイムフィルタリング
-            characterSearchInput.addEventListener("input", () => {
-                renderInventoryCharacters(characterSearchInput.value);
-            });
-            document.getElementById("searchButton").addEventListener("click", () => {
-                renderInventoryCharacters(characterSearchInput.value);
-            });
-
-            /**
-             * 装備画面の全体レンダリング
-             */
-            function renderEquipmentScreen() {
-                renderEquippedSlots();
-                renderInventoryCharacters(characterSearchInput.value);
-            }
-
-            /**
-             * 装備中キャラ（上部8スロット）のレンダリング
-             */
-            function renderEquippedSlots() {
-                equippedGrid.innerHTML = "";
-                
-                for (let i = 0; i < MAX_EQUIP_SLOTS; i++) {
-                    const slotDiv = document.createElement("div");
-                    slotDiv.className = "character-slot";
-                    
-                    const slotNumber = document.createElement("div");
-                    slotNumber.className = "slot-number";
-                    slotNumber.textContent = `SLOT ${i + 1}`;
-                    slotDiv.appendChild(slotNumber);
-
-                    if (i < equippedCharacterIds.length) {
-                        const characterId = equippedCharacterIds[i];
-                        const charData = CharacterDatabase.find(c => c.id === characterId);
-                        
-                        if (charData) {
-                            // HPと攻撃力の表示
-                            const statsDiv = document.createElement("div");
-                            statsDiv.className = "char-stats";
-                            statsDiv.innerHTML = `❤️${charData.hp} ⚔️${charData.attack}`;
-                            slotDiv.appendChild(statsDiv);
-
-                            // 画像の表示
-                            const imgElement = document.createElement("img");
-                            imgElement.src = charData.imagePath;
-                            imgElement.alt = charData.name;
-                            // 画像が見つからない場合のフォールバック（文字表示）
-                            imgElement.onerror = () => { imgElement.style.display = 'none'; };
-                            slotDiv.appendChild(imgElement);
-
-                            // 名前の表示
-                            const nameDiv = document.createElement("div");
-                            nameDiv.className = "char-name";
-                            nameDiv.textContent = charData.name;
-                            slotDiv.appendChild(nameDiv);
-
-                            // クリックで装備解除
-                            slotDiv.addEventListener("click", () => {
-                                unequipCharacter(i);
-                            });
-                        }
-                    } else {
-                        // 空きスロットの表示
-                        slotDiv.style.backgroundColor = "#99e6ff";
-                        const emptyText = document.createElement("div");
-                        emptyText.textContent = "EMPTY";
-                        emptyText.style.color = "rgba(0,0,0,0.3)";
-                        emptyText.style.fontWeight = "bold";
-                        slotDiv.appendChild(emptyText);
-                    }
-                    
-                    equippedGrid.appendChild(slotDiv);
-                }
-            }
-
-            /**
-             * 所持キャラ（下部インベントリ）のレンダリング
-             */
-            function renderInventoryCharacters(searchKeyword = "") {
-                inventoryGrid.innerHTML = "";
-                
-                // 検索キーワードでフィルタリング
-                const filteredOwned = ownedCharacterIds.filter(charId => {
-                    const charData = CharacterDatabase.find(c => c.id === charId);
-                    if (!charData) return false;
-                    if (searchKeyword === "") return true;
-                    return charData.name.includes(searchKeyword);
-                });
-
-                filteredOwned.forEach(charId => {
-                    const charData = CharacterDatabase.find(c => c.id === charId);
-                    if (!charData) return;
-
-                    const itemDiv = document.createElement("div");
-                    itemDiv.className = "character-slot";
-                    itemDiv.style.height = "100px"; // インベントリ用は少し小さめに
-
-                    // 既に装備中の場合は半透明にする
-                    if (equippedCharacterIds.includes(charId)) {
-                        itemDiv.style.opacity = "0.5";
-                        itemDiv.style.cursor = "not-allowed";
-                    } else {
-                        // クリックで装備
-                        itemDiv.addEventListener("click", () => {
-                            equipCharacter(charId);
-                        });
-                    }
-
-                    const statsDiv = document.createElement("div");
-                    statsDiv.className = "char-stats";
-                    statsDiv.innerHTML = `❤️${charData.hp} ⚔️${charData.attack}`;
-                    itemDiv.appendChild(statsDiv);
-
-                    const imgElement = document.createElement("img");
-                    imgElement.src = charData.imagePath;
-                    imgElement.alt = charData.name;
-                    imgElement.onerror = () => { imgElement.style.display = 'none'; };
-                    itemDiv.appendChild(imgElement);
-
-                    const nameDiv = document.createElement("div");
-                    nameDiv.className = "char-name";
-                    nameDiv.textContent = charData.name;
-                    itemDiv.appendChild(nameDiv);
-
-                    inventoryGrid.appendChild(itemDiv);
-                });
-            }
-
-            /**
-             * キャラクターを装備する処理
-             */
-            function equipCharacter(characterId) {
-                if (equippedCharacterIds.includes(characterId)) {
-                    return; // 既に装備中
-                }
-                if (equippedCharacterIds.length >= MAX_EQUIP_SLOTS) {
-                    alert("装備スロットがいっぱいです。どれかを外してください。");
-                    return;
-                }
-                equippedCharacterIds.push(characterId);
-                saveEquipmentData();
-                renderEquipmentScreen();
-            }
-
-            /**
-             * キャラクターの装備を外す処理
-             */
-            function unequipCharacter(slotIndex) {
-                equippedCharacterIds.splice(slotIndex, 1);
-                saveEquipmentData();
-                renderEquipmentScreen();
-            }
-
-            /**
-             * 装備状態の保存
-             */
-            function saveEquipmentData() {
-                gameDataManager.saveData("equippedCharacters", JSON.stringify(equippedCharacterIds));
-            }
-
-            // ゲーム起動時の初期化を実行
-            initializeGameSystem();
-        });
-    </script>
+    <!-- JSファイル読み込み -->
+    <script src="sub.js"></script>
 </body>
 </html>
