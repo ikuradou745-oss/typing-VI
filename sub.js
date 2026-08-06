@@ -454,6 +454,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return charaIcon;
     }
 
-    // ゲーム開始
+    // ゲーム開始。
     initGame();
 });
