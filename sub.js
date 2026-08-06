@@ -5,8 +5,10 @@
 class GameDataManager {
     constructor() {
         this.playerName = localStorage.getItem('playerName') || null;
-        // 初期データとしてスライム、オレンジスライム、グリーンスライムを所持し、スライムを装備にセット
+        
+        // 初期データとして3種のスライムを所持している状態をセット（テスト用に全解放）
         this.ownedSlimes = ["slime_01", "slime_02", "slime_03"];
+        // 装備の初期状態（最大4枠）
         this.equippedSlimes = ["slime_01"]; 
     }
 
@@ -52,15 +54,16 @@ class MoneyDisplayController {
 }
 
 // ============================================================================
-// キャラクターデータ
-// メモ: キャラクター画像の入手・参照方法は 「gazou/（キャラの名前）.png」 となります。
+// メモ: スライムの画像の取得ですが、「（スライムの名前）.png」という感じです。これはスクリプトにメモしておこう。
+// ============================================================================
+// キャラクターデータ (レアリティ: common, uncommon を追加)
 // ============================================================================
 
 const characterDatabase = [
     {
         id: "slime_01",
         name: "スライム",
-        rarity: "コモン",
+        rarity: "common",
         hp: 10,
         attack: 1,
         ability: "一回だけ死んでもHPを半分にして復活する",
@@ -69,7 +72,7 @@ const characterDatabase = [
     {
         id: "slime_02",
         name: "オレンジスライム",
-        rarity: "コモン",
+        rarity: "common",
         hp: 7,
         attack: 1,
         ability: "3回目の攻撃は攻撃力3倍（最大30までアップ可能）",
@@ -78,19 +81,13 @@ const characterDatabase = [
     {
         id: "slime_03",
         name: "グリーンスライム",
-        rarity: "アンコモン",
+        rarity: "uncommon",
         hp: 10,
         attack: 1,
         ability: "相手を3ターン毒状態にする（毒状態になると毎ターン1ダメージ喰らいます。）",
         image: "gazou/グリーンスライム.png"
     }
 ];
-
-// レアリティ定義
-const rarityRank = {
-    "コモン": 1,
-    "アンコモン": 2
-};
 
 // ============================================================================
 // メインゲームロジック・UI制御
@@ -107,8 +104,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const screenHome = document.getElementById('screen-home');
     const screenPlay = document.getElementById('screen-play');
     const screenEquip = document.getElementById('screen-equip');
+    const screenMatchmaking = document.getElementById('screen-matchmaking');
     const screenBattle = document.getElementById('screen-battle');
-    const matchmakingOverlay = document.getElementById('matchmaking-overlay');
     
     // ---- UI要素の取得 ----
     const inputName = document.getElementById('player-name-input');
@@ -123,26 +120,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // プレイモード画面のボタン
     const btnClosePlay = document.getElementById('btn-close-play');
-    const btnVsMode = document.getElementById('btn-vs-mode');
+    const btnVersusMode = document.getElementById('btn-versus-mode');
     const btnStoryMode = document.getElementById('btn-story-mode');
-
-    // バトル画面要素
-    const btnLeaveBattle = document.getElementById('btn-leave-battle');
-    const battleEnemyTeam = document.getElementById('battle-enemy-team');
-    const battlePlayerTeam = document.getElementById('battle-player-team');
 
     // 装備画面用
     const searchSlimeInput = document.getElementById('search-slime');
     const equippedList = document.getElementById('equipped-list');
     const ownedList = document.getElementById('owned-list');
 
-    // モーダル関連（設定）
+    // バトル画面用
+    const battlePlayerTeam = document.getElementById('battle-player-team');
+    const battleEnemyTeam = document.getElementById('battle-enemy-team');
+
+    // モーダル関連
     const modalSettings = document.getElementById('modal-settings');
     const settingsNameInput = document.getElementById('settings-name-input');
     const btnUpdateName = document.getElementById('btn-update-name');
     const btnCloseSettings = document.getElementById('btn-close-settings');
 
-    // モーダル関連（キャラ詳細）
     const modalCharaDetail = document.getElementById('modal-chara-detail');
     const btnCloseDetail = document.getElementById('btn-close-detail');
     const detailName = document.getElementById('detail-name');
@@ -152,7 +147,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const detailAttack = document.getElementById('detail-attack');
     const detailAbility = document.getElementById('detail-ability');
 
-    // モーダル関連（汎用メッセージ）
     const modalMessage = document.getElementById('modal-message');
     const messageText = document.getElementById('message-text');
     const btnCloseMessage = document.getElementById('btn-close-message');
@@ -162,12 +156,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // ========================================================================
 
     function showScreen(screenElement) {
-        document.querySelectorAll('.screen').forEach(s => {
-            s.classList.remove('active');
-            s.style.display = 'none';
-        });
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         screenElement.classList.add('active');
-        screenElement.style.display = 'flex';
     }
 
     function showMessage(text) {
@@ -243,7 +233,33 @@ document.addEventListener('DOMContentLoaded', () => {
         showScreen(screenHome);
     });
 
-    // ストーリーモードを押した時（開発中表示）
+    // 対戦モード（マッチメイキングロジック）
+    btnVersusMode.addEventListener('click', () => {
+        // 暗くするフェードイン処理
+        screenMatchmaking.style.opacity = '0';
+        showScreen(screenMatchmaking);
+        
+        // CSSトランジションを効かせるため少し遅延してopacityを1へ
+        setTimeout(() => {
+            screenMatchmaking.style.opacity = '1';
+        }, 50);
+
+        // 0.5〜1秒のランダムな待機時間後にバトル画面へ移行
+        const waitTime = Math.floor(Math.random() * 500) + 500;
+        
+        setTimeout(() => {
+            // フェードアウト開始
+            screenMatchmaking.style.opacity = '0';
+            
+            setTimeout(() => {
+                // バトル初期化と画面表示
+                initBattle();
+                showScreen(screenBattle);
+            }, 500); // 0.5秒のフェードアウト後に切り替え
+        }, waitTime + 500);
+    });
+
+    // ストーリーモード
     btnStoryMode.addEventListener('click', () => {
         showMessage('ストーリーモードは<br>開発中です！');
     });
@@ -253,109 +269,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ========================================================================
-    // 対戦モード・マッチング＆バトル生成ロジック
+    // 装備画面のロジック (最大4枠に変更)
     // ========================================================================
 
-    btnVsMode.addEventListener('click', () => {
-        if (gameData.equippedSlimes.length === 0) {
-            showMessage('スライムを少なくとも1体<br>装備してください！');
-            return;
-        }
-
-        // 暗転・マッチング演出 (フェードイン)
-        matchmakingOverlay.classList.add('active');
-
-        setTimeout(() => {
-            // 敵チームと味方チームを構築
-            setupBattleField();
-
-            // 画面切り替え（暗転裏でセットアップ）
-            showScreen(screenBattle);
-
-            // 暗転解除 (フェードアウト)
-            setTimeout(() => {
-                matchmakingOverlay.classList.remove('active');
-            }, 300);
-        }, 800);
-    });
-
-    btnLeaveBattle.addEventListener('click', () => {
-        showScreen(screenHome);
-    });
-
-    // 対戦相手および味方の生成処理
-    function setupBattleField() {
-        battlePlayerTeam.innerHTML = "";
-        battleEnemyTeam.innerHTML = "";
-
-        // 1. 味方（自分の装備スライム）を右側に配置
-        const playerCharaObjects = gameData.equippedSlimes.map(id => characterDatabase.find(c => c.id === id)).filter(Boolean);
-        
-        playerCharaObjects.forEach(chara => {
-            battlePlayerTeam.appendChild(createBattleUnitDOM(chara));
-        });
-
-        // 2. 自分の最高レアリティを測定
-        let maxRank = 1;
-        playerCharaObjects.forEach(chara => {
-            const rank = rarityRank[chara.rarity] || 1;
-            if (rank > maxRank) maxRank = rank;
-        });
-
-        // 3. 敵キャラを「自分の装備数」と同数生成（レアリティ考慮）
-        const enemyCount = playerCharaObjects.length;
-
-        for (let i = 0; i < enemyCount; i++) {
-            let targetRarity = "コモン";
-            
-            if (maxRank === 1) {
-                // 手持ちがコモンのみの場合、約33%でアンコモンの敵が出現
-                if (Math.random() < 0.33) {
-                    targetRarity = "アンコモン";
-                } else {
-                    targetRarity = "コモン";
-                }
-            } else {
-                // すでにアンコモンを持っている場合、アンコモン中心（またはランダム）
-                targetRarity = Math.random() < 0.7 ? "アンコモン" : "コモン";
-            }
-
-            // 指定レアリティのプールから敵を選択
-            let pool = characterDatabase.filter(c => c.rarity === targetRarity);
-            if (pool.length === 0) pool = characterDatabase; // 万が一該当がない場合フォールバック
-
-            const selectedEnemy = pool[Math.floor(Math.random() * pool.length)];
-            battleEnemyTeam.appendChild(createBattleUnitDOM(selectedEnemy));
-        }
-    }
-
-    // バトル画面用のキャラユニットDOM作成
-    function createBattleUnitDOM(chara) {
-        const unitDiv = document.createElement('div');
-        unitDiv.className = 'battle-chara-unit';
-
-        const hpBar = document.createElement('div');
-        hpBar.className = 'battle-hp-bar';
-        const hpFill = document.createElement('div');
-        hpFill.className = 'battle-hp-fill';
-        hpBar.appendChild(hpFill);
-
-        const img = document.createElement('img');
-        img.src = chara.image;
-        img.alt = chara.name;
-        img.onerror = function() {
-            this.src = 'data:image/svg+xml;charset=UTF-8,%3Csvg xmlns="http://www.w3.org/2000/svg" width="90" height="90" viewBox="0 0 90 90"%3E%3Crect fill="%23ddd" width="90" height="90"/%3E%3Ctext fill="%23555" x="45" y="45" font-family="sans-serif" font-size="12" text-anchor="middle" dy="4"%3ENo Image%3C/text%3E%3C/svg%3E';
-        };
-
-        unitDiv.appendChild(hpBar);
-        unitDiv.appendChild(img);
-
-        return unitDiv;
-    }
-
-    // ========================================================================
-    // 装備画面のロジック (最大4体)
-    // ========================================================================
+    const MAX_EQUIP = 4;
 
     btnEquip.addEventListener('click', () => {
         renderEquipScreen();
@@ -370,13 +287,12 @@ document.addEventListener('DOMContentLoaded', () => {
         equippedList.innerHTML = "";
         ownedList.innerHTML = "";
 
-        // ★最大4キャラ分の装備スロットを描画（アップデート要件）
-        const MAX_EQUIP = 4;
+        // 装備スロットの描画
         for (let i = 0; i < MAX_EQUIP; i++) {
             const slotId = gameData.equippedSlimes[i];
             if (slotId) {
                 const charaInfo = characterDatabase.find(c => c.id === slotId);
-                equippedList.appendChild(createCharaCard(charaInfo, true, i));
+                equippedList.appendChild(createCharaCard(charaInfo, true));
             } else {
                 const emptySlot = document.createElement('div');
                 emptySlot.className = 'chara-slot';
@@ -397,22 +313,23 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // キャラクターカードDOM生成（レアリティ表示＆背景色切り替え）
-    function createCharaCard(chara, isEquipped, slotIndex = null) {
+    // キャラクターカードDOM生成
+    function createCharaCard(chara, isEquipped) {
         const card = document.createElement('div');
-        card.className = `chara-card rarity-${chara.rarity}`;
+        card.className = 'chara-card';
         
-        // レアリティバッジ
-        const badge = document.createElement('div');
-        badge.className = 'rarity-badge';
-        badge.textContent = chara.rarity;
-        card.appendChild(badge);
-
+        // レアリティに応じたクラス（背景色）を付与
+        if (chara.rarity === 'common') {
+            card.classList.add('rarity-common');
+        } else if (chara.rarity === 'uncommon') {
+            card.classList.add('rarity-uncommon');
+        }
+        
         const img = document.createElement('img');
         img.src = chara.image;
         img.alt = chara.name;
         img.onerror = function() {
-            this.src = 'data:image/svg+xml;charset=UTF-8,%3Csvg xmlns="http://www.w3.org/2000/svg" width="65" height="65" viewBox="0 0 65 65"%3E%3Crect fill="%23ddd" width="65" height="65"/%3E%3Ctext fill="%23555" x="32.5" y="32.5" font-family="sans-serif" font-size="10" text-anchor="middle" dy="3"%3ENo Image%3C/text%3E%3C/svg%3E';
+            this.src = 'data:image/svg+xml;charset=UTF-8,%3Csvg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 60 60"%3E%3Crect fill="%23ddd" width="60" height="60"/%3E%3Ctext fill="%23555" x="30" y="30" font-family="sans-serif" font-size="10" text-anchor="middle" dy="3"%3ENo Image%3C/text%3E%3C/svg%3E';
         };
 
         const nameSpan = document.createElement('span');
@@ -422,11 +339,19 @@ document.addEventListener('DOMContentLoaded', () => {
         card.appendChild(img);
         card.appendChild(nameSpan);
 
-        // タップでキャラ詳細モーダルを開く
-        card.addEventListener('click', (e) => {
-            e.stopPropagation();
+        // クリックで詳細（GUIモーダル）を表示
+        card.addEventListener('click', () => {
             detailName.textContent = chara.name;
-            detailRarity.textContent = chara.rarity;
+            
+            // レアリティの表示テキストと色を変更
+            if (chara.rarity === 'common') {
+                detailRarity.textContent = '【 コモン 】';
+                detailRarity.style.color = '#7F8C8D';
+            } else if (chara.rarity === 'uncommon') {
+                detailRarity.textContent = '【 アンコモン 】';
+                detailRarity.style.color = '#27AE60';
+            }
+
             detailImage.src = chara.image;
             detailHp.textContent = chara.hp;
             detailAttack.textContent = chara.attack;
@@ -444,6 +369,90 @@ document.addEventListener('DOMContentLoaded', () => {
     searchSlimeInput.addEventListener('input', (e) => {
         renderEquipScreen(e.target.value);
     });
+
+    // ========================================================================
+    // バトル画面用の敵生成および配置ロジック
+    // ========================================================================
+
+    function initBattle() {
+        battlePlayerTeam.innerHTML = "";
+        battleEnemyTeam.innerHTML = "";
+
+        // 1. プレイヤーの装備しているキャラを取得
+        const playerSlimes = gameData.equippedSlimes
+            .map(id => characterDatabase.find(c => c.id === id))
+            .filter(chara => chara !== undefined);
+
+        // もし装備が空の場合はフォールバックとしてスライムを入れる
+        if (playerSlimes.length === 0) {
+            playerSlimes.push(characterDatabase.find(c => c.id === "slime_01"));
+        }
+
+        // 2. プレイヤー側の最大レアリティを判定 (common = 1, uncommon = 2)
+        let maxRarityNum = 1; 
+        playerSlimes.forEach(chara => {
+            if (chara.rarity === 'uncommon') maxRarityNum = 2;
+        });
+
+        // 3. 敵チームの編成（自分の装備数と同じ数だけ出現）
+        const enemyCount = playerSlimes.length;
+        const enemySlimes = [];
+
+        for (let i = 0; i < enemyCount; i++) {
+            let targetRarityNum = maxRarityNum;
+            
+            // 33%の確率で、プレイヤーの最大レアリティより1ランク上のレアリティが出現
+            if (Math.random() < 0.33) {
+                targetRarityNum += 1;
+            }
+
+            let targetRarity = targetRarityNum === 1 ? 'common' : 'uncommon';
+            
+            // 候補となる敵リストを絞り込み（該当レアリティがない場合のフェイルセーフ対応）
+            let possibleEnemies = characterDatabase.filter(c => c.rarity === targetRarity);
+            if (possibleEnemies.length === 0) {
+                possibleEnemies = characterDatabase.filter(c => c.rarity === (maxRarityNum === 1 ? 'common' : 'uncommon'));
+            }
+
+            // ランダムに敵を1体選択
+            const randomEnemy = possibleEnemies[Math.floor(Math.random() * possibleEnemies.length)];
+            enemySlimes.push(randomEnemy);
+        }
+
+        // 4. フィールドにDOMを描画する
+        
+        // 敵キャラの描画 (左側)
+        enemySlimes.forEach(chara => {
+            battleEnemyTeam.appendChild(createBattleIcon(chara));
+        });
+
+        // 自分のキャラの描画 (右側)
+        playerSlimes.forEach(chara => {
+            battlePlayerTeam.appendChild(createBattleIcon(chara));
+        });
+    }
+
+    // バトルフィールド専用のアイコンDOM生成関数
+    function createBattleIcon(chara) {
+        const charaIcon = document.createElement('div');
+        charaIcon.className = 'battle-chara';
+        
+        if (chara.rarity === 'common') {
+            charaIcon.classList.add('rarity-common');
+        } else if (chara.rarity === 'uncommon') {
+            charaIcon.classList.add('rarity-uncommon');
+        }
+
+        const img = document.createElement('img');
+        img.src = chara.image;
+        img.alt = chara.name;
+        img.onerror = function() {
+            this.src = 'data:image/svg+xml;charset=UTF-8,%3Csvg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 60 60"%3E%3Crect fill="%23ddd" width="60" height="60"/%3E%3Ctext fill="%23555" x="30" y="30" font-family="sans-serif" font-size="10" text-anchor="middle" dy="3"%3ENo Image%3C/text%3E%3C/svg%3E';
+        };
+
+        charaIcon.appendChild(img);
+        return charaIcon;
+    }
 
     // ゲーム開始
     initGame();
