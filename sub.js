@@ -6,7 +6,7 @@ class GameDataManager {
     constructor() {
         this.playerName = localStorage.getItem('playerName') || null;
         
-        // 初期データとして3種のスライムを所持している状態をセット（テスト用に全解放）
+        // 初期データとして3種のスライムを所持している状態をセット。（テスト用に全解放）
         this.ownedSlimes = ["slime_01", "slime_02", "slime_03"];
         // 装備の初期状態（最大4枠）
         this.equippedSlimes = ["slime_01"]; 
